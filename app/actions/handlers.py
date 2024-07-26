@@ -115,74 +115,65 @@ async def action_fetch_samples(integration, action_config: FetchSamplesConfig):
 @activity_logger()
 async def action_pull_observations(integration, action_config: PullObservationsConfig):
     logger.info(f"Executing pull_observations action with integration {integration} and action_config {action_config}...")
-    try:
-        async for attempt in stamina.retry_context(
-                on=httpx.HTTPError,
-                attempts=3,
-                wait_initial=datetime.timedelta(seconds=10),
-                wait_max=datetime.timedelta(seconds=10),
-        ):
-            with attempt:
-                vehicles = await client.get_positions_list(
-                    integration=integration
-                )
-
-        if vehicles:
-            logger.info(f"Observations pulled with success. Length: {len(vehicles)}")
-
-            transformed_data = await filter_and_transform(
-                vehicles,
-                str(integration.id),
-                "pull_observations"
+    async for attempt in stamina.retry_context(
+            on=httpx.HTTPError,
+            attempts=3,
+            wait_initial=datetime.timedelta(seconds=10),
+            wait_max=datetime.timedelta(seconds=10),
+    ):
+        with attempt:
+            vehicles = await client.get_positions_list(
+                integration=integration
             )
 
-            if transformed_data:
-                async for attempt in stamina.retry_context(
-                        on=httpx.HTTPError,
-                        attempts=3,
-                        wait_initial=datetime.timedelta(seconds=10),
-                        wait_max=datetime.timedelta(seconds=10),
-                ):
-                    with attempt:
-                        try:
-                            response = await send_observations_to_gundi(
-                                observations=transformed_data,
-                                integration_id=str(integration.id)
+    if vehicles:
+        logger.info(f"Observations pulled with success. Length: {len(vehicles)}")
+
+        transformed_data = await filter_and_transform(
+            vehicles,
+            str(integration.id),
+            "pull_observations"
+        )
+
+        if transformed_data:
+            async for attempt in stamina.retry_context(
+                    on=httpx.HTTPError,
+                    attempts=3,
+                    wait_initial=datetime.timedelta(seconds=10),
+                    wait_max=datetime.timedelta(seconds=10),
+            ):
+                with attempt:
+                    try:
+                        response = await send_observations_to_gundi(
+                            observations=transformed_data,
+                            integration_id=str(integration.id)
+                        )
+                    except httpx.HTTPError as e:
+                        msg = f'Sensors API returned error for integration_id: {str(integration.id)}. Exception: {e}'
+                        logger.exception(
+                            msg,
+                            extra={
+                                'needs_attention': True,
+                                'integration_id': str(integration.id),
+                                'action_id': "pull_observations"
+                            }
+                        )
+                        raise e
+                    else:
+                        for vehicle in transformed_data:
+                            # Update state
+                            state = {
+                                "latest_device_timestamp": vehicle.get("recorded_at")
+                            }
+                            await state_manager.set_state(
+                                str(integration.id),
+                                "pull_observations",
+                                state,
+                                vehicle.get("source")
                             )
-                        except httpx.HTTPError as e:
-                            msg = f'Sensors API returned error for integration_id: {str(integration.id)}. Exception: {e}'
-                            logger.exception(
-                                msg,
-                                extra={
-                                    'needs_attention': True,
-                                    'integration_id': str(integration.id),
-                                    'action_id': "pull_observations"
-                                }
-                            )
-                            raise e
-                        else:
-                            for vehicle in transformed_data:
-                                # Update state
-                                state = {
-                                    "latest_device_timestamp": vehicle.get("recorded_at")
-                                }
-                                await state_manager.set_state(
-                                    str(integration.id),
-                                    "pull_observations",
-                                    state,
-                                    vehicle.get("source")
-                                )
-            else:
-                response = []
+                        return response
         else:
-            logger.info(f"No observation extracted for integration_id: {str(integration.id)}.")
-            response = []
-    except httpx.HTTPError as e:
-        message = f"pull_observations action returned error."
-        logger.exception(message, extra={
-            "integration_id": str(integration.id),
-            "attention_needed": True
-        })
-        raise e
+            return []
     else:
-        return response
+        logger.info(f"No observation extracted for integration_id: {str(integration.id)}.")
+        return []
