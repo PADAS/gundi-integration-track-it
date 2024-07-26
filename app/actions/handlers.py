@@ -77,8 +77,7 @@ async def action_auth(integration, action_config: AuthenticateConfig):
     logger.info(f"Executing auth action with integration {integration} and action_config {action_config}...")
     try:
         response = await client.get_positions_list(
-            integration=integration,
-            config=action_config
+            integration=integration
         )
     except httpx.HTTPError as e:
         message = f"auth action returned error."
@@ -96,8 +95,7 @@ async def action_fetch_samples(integration, action_config: FetchSamplesConfig):
     logger.info(f"Executing fetch_samples action with integration {integration} and action_config {action_config}...")
     try:
         vehicles = await client.get_positions_list(
-            integration=integration,
-            config=action_config
+            integration=integration
         )
     except httpx.HTTPError as e:
         message = f"fetch_samples action returned error."
@@ -126,8 +124,7 @@ async def action_pull_observations(integration, action_config: PullObservationsC
         ):
             with attempt:
                 vehicles = await client.get_positions_list(
-                    integration=integration,
-                    config=action_config
+                    integration=integration
                 )
 
         if vehicles:
