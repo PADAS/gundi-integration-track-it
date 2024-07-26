@@ -18,17 +18,18 @@ state_manager = IntegrationStateManager()
 
 async def filter_and_transform(devices, integration_id, action_id):
     def transform(device):
-        device_id = device.pop("Imeino")
-        device_name = device.pop("Vehicle_Name")
+        device_id = device.get("Imeino")
+        device_name = device.get("Vehicle_Name")
 
         recorded_at = datetime.datetime.strptime(
-            device.pop("GPSActualTime"),
+            device.get("GPSActualTime"),
             '%d-%m-%Y %H:%M:%S'
         ).replace(tzinfo=datetime.timezone.utc)
-        lat = device.pop("Latitude")
-        lon = device.pop("Longitude")
+        lat = device.get("Latitude")
+        lon = device.get("Longitude")
 
-        additional = {k: v for k, v in device.items() if v and v != "--"}
+        base_fields = ["Imeino", "Vehicle_Name", "GPSActualTime", "Latitude", "Longitude"]
+        additional = {k: v for k, v in device.items() if k not in base_fields and v and v != "--"}
 
         return {
             "source": device_id,
