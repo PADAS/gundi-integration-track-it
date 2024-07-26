@@ -159,7 +159,7 @@ async def action_pull_observations(integration, action_config: PullObservationsC
                                     'action_id': "pull_observations"
                                 }
                             )
-                            return [msg]
+                            raise e
                         else:
                             for vehicle in transformed_data:
                                 # Update state
