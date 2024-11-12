@@ -116,6 +116,7 @@ async def action_fetch_samples(integration, action_config: FetchSamplesConfig):
 @activity_logger()
 async def action_pull_observations(integration, action_config: PullObservationsConfig):
     logger.info(f"Executing pull_observations action with integration {integration} and action_config {action_config}...")
+    result = {"observations_extracted": 0, "details": {}}
     async for attempt in stamina.retry_context(
             on=httpx.HTTPError,
             attempts=3,
@@ -127,6 +128,7 @@ async def action_pull_observations(integration, action_config: PullObservationsC
                 integration=integration
             )
 
+    total_observations = 0
     if vehicles:
         logger.info(f"Observations pulled with success. Length: {len(vehicles)}")
 
@@ -161,6 +163,7 @@ async def action_pull_observations(integration, action_config: PullObservationsC
                         )
                         raise e
                     else:
+                        total_observations += len(transformed_data)
                         for vehicle in transformed_data:
                             # Update state
                             state = {
@@ -172,9 +175,12 @@ async def action_pull_observations(integration, action_config: PullObservationsC
                                 state,
                                 vehicle.get("source")
                             )
-                        return response
+                        result["observations_extracted"] = total_observations
+                        result["details"] = response
+                        return result
         else:
-            return []
+            result["message"] = "No transformed data to send."
+            return result
     else:
         logger.info(f"No observation extracted for integration_id: {str(integration.id)}.")
-        return []
+        return result
