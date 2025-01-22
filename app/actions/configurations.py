@@ -1,11 +1,19 @@
+from pydantic import SecretStr, Field
 from app.services.errors import ConfigurationNotFound
-from app.services.utils import find_config_for_action
+from app.services.utils import find_config_for_action, GlobalUISchemaOptions
 from .core import PullActionConfiguration, AuthActionConfiguration
 
 
 class AuthenticateConfig(AuthActionConfiguration):
     username: str
-    password: str
+    password: SecretStr = Field(..., format="password")
+
+    ui_global_options: GlobalUISchemaOptions = GlobalUISchemaOptions(
+        order=[
+            "username",
+            "password",
+        ],
+    )
 
 
 class FetchSamplesConfig(PullActionConfiguration):
