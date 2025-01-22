@@ -17,7 +17,7 @@ async def get_positions_list(integration):
     params = {
         "token": "getLiveData",
         "user": auth.username,
-        "pass": auth.password,
+        "pass": auth.password.get_secret_value(),
         "format": "json"
     }
 
