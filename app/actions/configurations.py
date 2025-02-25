@@ -1,10 +1,10 @@
 from pydantic import SecretStr, Field
 from app.services.errors import ConfigurationNotFound
 from app.services.utils import find_config_for_action, GlobalUISchemaOptions
-from .core import PullActionConfiguration, AuthActionConfiguration
+from .core import PullActionConfiguration, AuthActionConfiguration, ExecutableActionMixin
 
 
-class AuthenticateConfig(AuthActionConfiguration):
+class AuthenticateConfig(AuthActionConfiguration, ExecutableActionMixin):
     username: str
     password: SecretStr = Field(..., format="password")
 
@@ -16,7 +16,7 @@ class AuthenticateConfig(AuthActionConfiguration):
     )
 
 
-class FetchSamplesConfig(PullActionConfiguration):
+class FetchSamplesConfig(PullActionConfiguration, ExecutableActionMixin):
     observations_to_extract: int = 20
 
 
